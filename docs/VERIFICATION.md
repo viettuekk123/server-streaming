@@ -45,3 +45,17 @@ Các kết quả số cụ thể là quan sát của một lần chạy, không 
 - Chưa kiểm tra cài mới ODBC Driver18 trên Windows sạch. Không commit các đường dẫn `.tools` riêng của máy vào cấu hình mẫu.
 
 Xem README của hai repo để tái lập. Tạo thêm demo theo ID bằng `scripts.prepare_demo`; đường dẫn frontend `/demo/{id}` cho phép mở từng mẫu.
+
+## Đợt kiểm tra Playwright MCP — 25/10/2026
+
+Đã kiểm tra bản `@playwright/mcp 0.0.83` tại `D:\dvt-tools\playwright-mcp` và dùng kết nối MCP Playwright của phiên làm việc để thao tác trình duyệt.
+
+- Demo65 giây và video dọc phát bình thường; MSE codec được hỗ trợ.
+- Đăng nhập sai trả thông báo đúng; đổi video khi segment cũ tải chậm không gây lỗi giải mã ở video mới.
+- Phát hiện: tua khi pause trước lần Play đầu không lưu tiến độ (UI ở5 giây, API progress vẫn0).
+- Phát hiện thêm: StrictMode mở hai phiên ghi; trì hoãn request đầu800ms khiến nó thay quyền ghi của player đang dùng, PUT tiếp theo bị409.
+- Đã sửa frontend: lưu riêng seeked, xếp hàng PUT tiến độ, bỏ khởi tạo từ effect StrictMode đã cleanup và abort request mở phiên lúc đóng.
+- Xác minh lại qua MCP trên SQL Server thật: chỉ một POST mở phiên, PUT thành công, position6 giây được lưu, reload về6 giây và không còn notice409.
+- E2E mới mô phỏng API tiến độ nhưng sử dụng segment thật để khóa hồi quy StrictMode/seek trước Play; kiểm chứng SQL thực tế được thực hiện riêng bằng MCP như trên.
+- Sau sửa: 8 unit test, 4 Chrome E2E và production build pass. Test/backend không bị thay đổi bởi bản sửa này.
+- Kiểm tra thêm bằng MCP: chuyển trang SPA vào/ra player ba lần, mỗi lần unmount còn0 object URL; segment404 chỉ một request rồi hiển thị lỗi, không retry vô hạn. Đây là kiểm tra tài nguyên cơ bản, chưa thay thế memory/heap profiling dài hạn.
