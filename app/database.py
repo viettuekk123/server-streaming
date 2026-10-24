@@ -16,10 +16,17 @@ class Base(DeclarativeBase):
     pass
 
 
-url = URL.create("mssql+pyodbc", username=settings.db_user, password=settings.db_password,
-                 host=settings.db_host, database=settings.db_name,
-                 query={"driver": settings.db_driver, "TrustServerCertificate": "yes"})
-engine = create_engine(url, pool_pre_ping=True)
+url = URL.create(
+    "mssql+pyodbc",
+    username=settings.db_user,
+    password=settings.db_password,
+    host=settings.db_host,
+    database=settings.db_name,
+    query={"driver": settings.db_driver, "TrustServerCertificate": "yes"},
+)
+engine = create_engine(
+    url, pool_pre_ping=True, use_setinputsizes=settings.db_driver != "SQL Server"
+)
 SessionLocal = sessionmaker(engine, expire_on_commit=False)
 
 

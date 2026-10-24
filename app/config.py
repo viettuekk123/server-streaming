@@ -6,7 +6,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=ROOT / ".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=ROOT / ".env", env_file_encoding="utf-8-sig", extra="ignore"
+    )
 
     app_origin: str = "http://localhost:5173"
     storage_dir: Path = ROOT / "storage"

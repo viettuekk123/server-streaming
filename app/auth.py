@@ -4,7 +4,7 @@ import uuid
 from datetime import timedelta
 
 from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError, VerificationError
+from argon2.exceptions import VerificationError, VerifyMismatchError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -50,10 +50,24 @@ def write_user(request: Request, db: Session = Depends(get_db)) -> User:
 def start_session(user: User, db: Session, response: Response) -> dict:
     raw = secrets.token_urlsafe(32)
     csrf = secrets.token_hex(32)
-    db.add(LoginSession(token_hash=hashlib.sha256(raw.encode()).hexdigest(), user_id=user.id, csrf_token=csrf,
-                        expires_at=now() + timedelta(days=settings.session_days)))
+    db.add(
+        LoginSession(
+            token_hash=hashlib.sha256(raw.encode()).hexdigest(),
+            user_id=user.id,
+            csrf_token=csrf,
+            expires_at=now() + timedelta(days=settings.session_days),
+        )
+    )
     db.commit()
-    response.set_cookie("bvg_session", raw, httponly=True, secure=settings.cookie_secure, samesite="lax", max_age=settings.session_days * 86400, path="/")
+    response.set_cookie(
+        "bvg_session",
+        raw,
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite="lax",
+        max_age=settings.session_days * 86400,
+        path="/",
+    )
     return {"user": {"id": user.id, "username": user.username}, "csrf_token": csrf}
 
 
@@ -62,7 +76,11 @@ def register(body: Register, request: Request, response: Response, db: Session =
     check_origin(request)
     if body.password != body.confirm_password:
         raise HTTPException(400, "Mật khẩu xác nhận không khớp")
-    user = User(id=uuid.uuid4().hex, username=body.username.lower(), password_hash=hasher.hash(body.password))
+    user = User(
+        id=uuid.uuid4().hex,
+        username=body.username.lower(),
+        password_hash=hasher.hash(body.password),
+    )
     db.add(user)
     try:
         db.commit()
@@ -73,7 +91,12 @@ def register(body: Register, request: Request, response: Response, db: Session =
 
 
 @router.post("/login")
-def login(body: Credentials, request: Request, response: Response, db: Session = Depends(get_db)):
+def login(
+    body: Credentials,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
     check_origin(request)
     user = db.scalar(select(User).where(User.username == body.username.lower()))
     try:
@@ -88,11 +111,19 @@ def login(body: Credentials, request: Request, response: Response, db: Session =
 @router.get("/me")
 def me(request: Request, db: Session = Depends(get_db)):
     login, user = session_user(request, db)
-    return {"user": {"id": user.id, "username": user.username}, "csrf_token": login.csrf_token}
+    return {
+        "user": {"id": user.id, "username": user.username},
+        "csrf_token": login.csrf_token,
+    }
 
 
 @router.post("/logout")
-def logout(request: Request, response: Response, user: User = Depends(write_user), db: Session = Depends(get_db)):
+def logout(
+    request: Request,
+    response: Response,
+    user: User = Depends(write_user),
+    db: Session = Depends(get_db),
+):
     login, _ = session_user(request, db)
     db.delete(login)
     db.commit()

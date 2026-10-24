@@ -1,9 +1,10 @@
 """Script khởi tạo schema cho demo. Không xóa bảng hoặc dữ liệu đã có."""
+
 import pyodbc
 
+from app import models  # noqa: F401 — Đăng ký model trước create_all.
 from app.config import settings
 from app.database import Base, engine
-from app import models  # Đăng ký model trước create_all.
 
 if not settings.db_name.replace("_", "").isalnum():
     raise ValueError("DB_NAME chỉ gồm chữ, số và dấu gạch dưới")

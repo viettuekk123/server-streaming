@@ -2,7 +2,6 @@ import json
 import logging
 import shutil
 import uuid
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy import func, select
@@ -20,36 +19,69 @@ logger = logging.getLogger(__name__)
 
 def ready_generation(video_id: str) -> str | None:
     with SessionLocal() as db:
-        return db.scalar(select(Video.generation).where(Video.id == video_id, Video.status == "ready"))
+        return db.scalar(
+            select(Video.generation).where(Video.id == video_id, Video.status == "ready")
+        )
 
 
 def public_video(video: Video, username: str) -> dict:
-    return {"id": video.id, "title": video.title, "description": video.description, "username": username,
-            "status": video.status, "error": video.error, "duration": video.duration,
-            "created_at": video.created_at.isoformat() + "Z",
-            "thumbnail_url": f"/api/media/{video.id}/{video.generation}/thumbnail.jpg" if video.status == "ready" else None}
+    return {
+        "id": video.id,
+        "title": video.title,
+        "description": video.description,
+        "username": username,
+        "status": video.status,
+        "error": video.error,
+        "duration": video.duration,
+        "created_at": video.created_at.isoformat() + "Z",
+        "thumbnail_url": f"/api/media/{video.id}/{video.generation}/thumbnail.jpg"
+        if video.status == "ready"
+        else None,
+    }
 
 
 @router.get("")
-def list_videos(q: str = Query("", max_length=200), page: int = Query(1, ge=1), db: Session = Depends(get_db)):
+def list_videos(
+    q: str = Query("", max_length=200),
+    page: int = Query(1, ge=1),
+    db: Session = Depends(get_db),
+):
     conditions = [Video.status == "ready"]
     if q.strip():
         conditions.append(Video.title.contains(q.strip(), autoescape=True))
     total = db.scalar(select(func.count()).select_from(Video).where(*conditions))
-    rows = db.execute(select(Video, User.username).join(User, Video.user_id == User.id).where(*conditions)
-                      .order_by(Video.created_at.desc(), Video.id).offset((page - 1) * 12).limit(12)).all()
-    return {"items": [public_video(video, name) for video, name in rows], "total": total, "page": page, "page_size": 12}
+    rows = db.execute(
+        select(Video, User.username)
+        .join(User, Video.user_id == User.id)
+        .where(*conditions)
+        .order_by(Video.created_at.desc(), Video.id)
+        .offset((page - 1) * 12)
+        .limit(12)
+    ).all()
+    return {
+        "items": [public_video(video, name) for video, name in rows],
+        "total": total,
+        "page": page,
+        "page_size": 12,
+    }
 
 
 @router.get("/mine")
 def my_videos(user: User = Depends(current_user), db: Session = Depends(get_db)):
-    rows = db.scalars(select(Video).where(Video.user_id == user.id).order_by(Video.created_at.desc())).all()
+    rows = db.scalars(
+        select(Video).where(Video.user_id == user.id).order_by(Video.created_at.desc())
+    ).all()
     return [public_video(video, user.username) for video in rows]
 
 
 @router.post("", status_code=202)
-def upload(title: str = Form(..., min_length=1, max_length=200), description: str = Form("", max_length=5000),
-           file: UploadFile = File(...), user: User = Depends(write_user), db: Session = Depends(get_db)):
+def upload(
+    title: str = Form(..., min_length=1, max_length=200),
+    description: str = Form("", max_length=5000),
+    file: UploadFile = File(...),
+    user: User = Depends(write_user),
+    db: Session = Depends(get_db),
+):
     if not title.strip():
         raise HTTPException(400, "Tiêu đề không được để trống")
     video_id = uuid.uuid4().hex
@@ -69,7 +101,13 @@ def upload(title: str = Form(..., min_length=1, max_length=200), description: st
         except (RuntimeError, ValueError, KeyError) as error:
             logger.info("Upload không hợp lệ: %s", error)
             raise HTTPException(400, "Không đọc được video. Hãy chọn file video hợp lệ.")
-        video = Video(id=video_id, user_id=user.id, title=title.strip(), description=description.strip(), status="uploaded")
+        video = Video(
+            id=video_id,
+            user_id=user.id,
+            title=title.strip(),
+            description=description.strip(),
+            status="uploaded",
+        )
         db.add(video)
         db.flush()
         db.add(ProcessingJob(id=uuid.uuid4().hex, video_id=video_id, status="queued"))
@@ -94,7 +132,11 @@ def manifest(video_id: str, db: Session = Depends(get_db)):
 
 @router.get("/{video_id}")
 def detail(video_id: str, db: Session = Depends(get_db)):
-    row = db.execute(select(Video, User.username).join(User, Video.user_id == User.id).where(Video.id == video_id, Video.status == "ready")).first()
+    row = db.execute(
+        select(Video, User.username)
+        .join(User, Video.user_id == User.id)
+        .where(Video.id == video_id, Video.status == "ready")
+    ).first()
     if not row:
         raise HTTPException(404, "Không tìm thấy video")
     return public_video(*row)
