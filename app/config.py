@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     db_host: str = "localhost,1433"
     db_name: str = "bvg_streaming"
     db_user: str = "sa"
+    db_driver: str = "ODBC Driver 18 for SQL Server"
     db_password: str = ""
     cookie_secure: bool = False
     session_days: int = 7
