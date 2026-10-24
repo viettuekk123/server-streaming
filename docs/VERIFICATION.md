@@ -4,7 +4,7 @@
 
 - Windows, Python 3.12.14, Node 20.20.2.
 - SQL Server 2022 CU20 Docker: container healthy, volume dữ liệu hoạt động.
-- FFmpeg Windows local (muxer DASH, libx264/AAC). Bản thử đầu sử dụng FFmpeg 4.1; bản FFmpeg mới hơn đang tải vào `.tools`, không đưa binary lên Git.
+- FFmpeg Windows local (muxer DASH, libx264/AAC). Bản thử sử dụng FFmpeg 4.1 trong `.tools`; không đưa binary lên Git. Có thể cài bản mới hơn theo README.
 - Kết nối SQLAlchemy + pyodbc được kiểm tra với driver `SQL Server` có sẵn và use_setinputsizes=False, chạy bằng tài khoản Windows chính. Máy chưa cài thành công ODBC Driver 18; README hướng dẫn cài driver hiện đại. Không kết luận Driver 18 đã được kiểm tra.
 - Player đã chạy trong Chromium của công cụ trình duyệt và Chrome headless cài trên máy.
 
